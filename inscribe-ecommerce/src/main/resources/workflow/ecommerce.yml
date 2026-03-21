@@ -1,0 +1,16 @@
+workflow:
+  name: "ecommerce"
+  container-label: "Ordine"
+  item-label: "Prodotto"
+  ai-prompt: "Dato il catalogo prodotti, restituisci gli ID corrispondenti a: {userInput}"
+  steps:
+    - name: "verifica-disponibilità"
+      handler: "StockValidationHandler"
+      on-failure: REJECT
+    - name: "inserimento"
+      handler: "EcommerceInsertionHandler"
+      on-failure: RETRY
+  on-complete:
+    topic: "ecommerce.product.inserted"
+  on-reject:
+    topic: "ecommerce.product.rejected"

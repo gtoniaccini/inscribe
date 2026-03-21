@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-seed-products
+      author: inscribe
+      changes:
+        - insert:
+            tableName: products
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: sku, value: "LAPTOP-01" }
+              - column: { name: name, value: "Laptop Pro 15" }
+              - column: { name: description, value: "Laptop professionale 15 pollici, 16GB RAM, 512GB SSD" }
+              - column: { name: price, valueNumeric: 1299.99 }
+              - column: { name: stock_quantity, valueNumeric: 25 }
+              - column: { name: category, value: "Elettronica" }
+        - insert:
+            tableName: products
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: sku, value: "MOUSE-W01" }
+              - column: { name: name, value: "Mouse Wireless Ergonomico" }
+              - column: { name: description, value: "Mouse wireless con design ergonomico e batteria ricaricabile" }
+              - column: { name: price, valueNumeric: 49.99 }
+              - column: { name: stock_quantity, valueNumeric: 150 }
+              - column: { name: category, value: "Accessori" }
+        - insert:
+            tableName: products
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: sku, value: "MONITOR-27" }
+              - column: { name: name, value: "Monitor 4K 27 pollici" }
+              - column: { name: description, value: "Monitor IPS 4K UHD con USB-C e altoparlanti integrati" }
+              - column: { name: price, valueNumeric: 549.00 }
+              - column: { name: stock_quantity, valueNumeric: 40 }
+              - column: { name: category, value: "Elettronica" }
+        - insert:
+            tableName: products
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: sku, value: "KEYBOARD-M" }
+              - column: { name: name, value: "Tastiera Meccanica RGB" }
+              - column: { name: description, value: "Tastiera meccanica con switch cherry e retroilluminazione RGB" }
+              - column: { name: price, valueNumeric: 129.99 }
+              - column: { name: stock_quantity, valueNumeric: 80 }
+              - column: { name: category, value: "Accessori" }
+        - insert:
+            tableName: products
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: sku, value: "HEADSET-NC" }
+              - column: { name: name, value: "Cuffie Noise Cancelling" }
+              - column: { name: description, value: "Cuffie over-ear con cancellazione attiva del rumore e Bluetooth 5.3" }
+              - column: { name: price, valueNumeric: 299.99 }
+              - column: { name: stock_quantity, valueNumeric: 0 }
+              - column: { name: category, value: "Audio" }
