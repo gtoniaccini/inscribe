@@ -1,0 +1,77 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-seed-medical-exams
+      author: inscribe
+      changes:
+        - insert:
+            tableName: medical_exams
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: code, value: "EMO" }
+              - column: { name: name, value: "Emocromo completo" }
+              - column: { name: description, value: "Analisi completa del sangue con conta dei globuli rossi, bianchi e piastrine" }
+              - column: { name: category, value: "Ematologia" }
+              - column: { name: requires_fasting, valueBoolean: true }
+        - insert:
+            tableName: medical_exams
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: code, value: "GLI" }
+              - column: { name: name, value: "Glicemia" }
+              - column: { name: description, value: "Misurazione del livello di glucosio nel sangue a digiuno" }
+              - column: { name: category, value: "Biochimica" }
+              - column: { name: requires_fasting, valueBoolean: true }
+        - insert:
+            tableName: medical_exams
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: code, value: "COL" }
+              - column: { name: name, value: "Colesterolo totale" }
+              - column: { name: description, value: "Dosaggio del colesterolo totale nel siero" }
+              - column: { name: category, value: "Biochimica" }
+              - column: { name: requires_fasting, valueBoolean: true }
+        - insert:
+            tableName: medical_exams
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: code, value: "TSH" }
+              - column: { name: name, value: "TSH" }
+              - column: { name: description, value: "Ormone tireostimolante per la funzionalità tiroidea" }
+              - column: { name: category, value: "Endocrinologia" }
+              - column: { name: requires_fasting, valueBoolean: false }
+        - insert:
+            tableName: medical_exams
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: code, value: "CRE" }
+              - column: { name: name, value: "Creatinina" }
+              - column: { name: description, value: "Indicatore della funzionalità renale" }
+              - column: { name: category, value: "Biochimica" }
+              - column: { name: requires_fasting, valueBoolean: false }
+        - insert:
+            tableName: medical_exams
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: code, value: "TRA" }
+              - column: { name: name, value: "Transaminasi (GOT/GPT)" }
+              - column: { name: description, value: "Enzimi epatici per la funzionalità del fegato" }
+              - column: { name: category, value: "Biochimica" }
+              - column: { name: requires_fasting, valueBoolean: true }
+        - insert:
+            tableName: medical_exams
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: code, value: "URI" }
+              - column: { name: name, value: "Esame urine completo" }
+              - column: { name: description, value: "Analisi chimico-fisica e microscopica delle urine" }
+              - column: { name: category, value: "Chimica clinica" }
+              - column: { name: requires_fasting, valueBoolean: false }
+        - insert:
+            tableName: medical_exams
+            columns:
+              - column: { name: id, valueComputed: "gen_random_uuid()" }
+              - column: { name: code, value: "ECG" }
+              - column: { name: name, value: "Elettrocardiogramma" }
+              - column: { name: description, value: "Registrazione dell'attività elettrica del cuore" }
+              - column: { name: category, value: "Cardiologia" }
+              - column: { name: requires_fasting, valueBoolean: false }

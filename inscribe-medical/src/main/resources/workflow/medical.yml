@@ -1,0 +1,16 @@
+workflow:
+  name: "medical"
+  container-label: "Ricetta"
+  item-label: "Esame"
+  ai-prompt: "Dato il catalogo degli esami medici, restituisci gli ID corrispondenti a: {userInput}"
+  steps:
+    - name: "validazione"
+      handler: "MedicalValidationHandler"
+      on-failure: REJECT
+    - name: "inserimento"
+      handler: "MedicalInsertionHandler"
+      on-failure: RETRY
+  on-complete:
+    topic: "medical.exam.inserted"
+  on-reject:
+    topic: "medical.exam.rejected"
