@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -26,13 +27,13 @@ public class PrescriptionController {
     private final PrescriptionRepository prescriptionRepository;
     private final PrescriptionExamRepository examRepository;
     private final Orchestrator orchestrator;
-    private final AiResolver aiResolver;
+    private final Optional<AiResolver> aiResolver;
 
     public PrescriptionController(
             PrescriptionRepository prescriptionRepository,
             PrescriptionExamRepository examRepository,
             Orchestrator orchestrator,
-            AiResolver aiResolver) {
+            Optional<AiResolver> aiResolver) {
         this.prescriptionRepository = prescriptionRepository;
         this.examRepository = examRepository;
         this.orchestrator = orchestrator;
@@ -86,8 +87,11 @@ public class PrescriptionController {
             @PathVariable UUID id,
             @RequestBody AiPromptRequest request) {
         findPrescription(id); // verify exists
-        
-        List<CatalogItem> resolved = aiResolver.resolve(WORKFLOW, request.prompt());
+
+        AiResolver resolver = aiResolver.orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE, "AI is not enabled. Set inscribe.ai.enabled=true and provide an OpenAI API key."));
+
+        List<CatalogItem> resolved = resolver.resolve(WORKFLOW, request.prompt());
 
         for (CatalogItem item : resolved) {
             orchestrator.submit(new InsertItemCommand(id, WORKFLOW, item.id(), item.name()));

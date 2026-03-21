@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -27,13 +28,13 @@ public class CartController {
     private final CartRepository cartRepository;
     private final OrderLineItemRepository lineItemRepository;
     private final Orchestrator orchestrator;
-    private final AiResolver aiResolver;
+    private final Optional<AiResolver> aiResolver;
 
     public CartController(
             CartRepository cartRepository,
             OrderLineItemRepository lineItemRepository,
             Orchestrator orchestrator,
-            AiResolver aiResolver) {
+            Optional<AiResolver> aiResolver) {
         this.cartRepository = cartRepository;
         this.lineItemRepository = lineItemRepository;
         this.orchestrator = orchestrator;
@@ -85,7 +86,11 @@ public class CartController {
             @PathVariable UUID id,
             @RequestBody AiPromptRequest request) {
         findCart(id); // verify exists
-        List<CatalogItem> resolved = aiResolver.resolve(WORKFLOW, request.prompt());
+
+        AiResolver resolver = aiResolver.orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE, "AI is not enabled. Set inscribe.ai.enabled=true and provide an OpenAI API key."));
+
+        List<CatalogItem> resolved = resolver.resolve(WORKFLOW, request.prompt());
 
         for (CatalogItem item : resolved) {
             orchestrator.submit(new InsertItemCommand(id, WORKFLOW, item.id(), item.name()));
