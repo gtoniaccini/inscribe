@@ -1,0 +1,11 @@
+inscribe:
+  ai:
+    enabled: false
+
+spring:
+  ai:
+    openai:
+      api-key: disabled
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration

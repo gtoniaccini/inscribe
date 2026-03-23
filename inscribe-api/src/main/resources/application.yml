@@ -1,0 +1,52 @@
+# Inscribe settings
+inscribe:
+  ai:
+    enabled: ${INSCRIBE_AI_ENABLED:true}
+  transport: none
+  outbox:
+    relay-interval-ms: 2000
+
+spring:
+  application:
+    name: inscribe
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/inscribe}
+    username: ${DATABASE_USERNAME:inscribe}
+    password: ${DATABASE_PASSWORD:inscribe}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-placeholder}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.2
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  recovery:
+    interval-ms: 30000
+
+# Logging
+logging:
+  level:
+    dev.inscribe: DEBUG
+    org.springframework.ai: DEBUG
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
