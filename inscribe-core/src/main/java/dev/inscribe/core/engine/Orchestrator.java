@@ -5,6 +5,7 @@ import org.redisson.api.RDeque;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -22,23 +23,27 @@ public class Orchestrator {
     private final RedissonClient redisson;
     private final LockManager lockManager;
     private final CommandProcessor commandProcessor;
+    private final TaskExecutor taskExecutor;
 
     public Orchestrator(RedissonClient redisson,
                         LockManager lockManager,
-                        CommandProcessor commandProcessor) {
+                        CommandProcessor commandProcessor,
+                        TaskExecutor taskExecutor) {
         this.redisson = redisson;
         this.lockManager = lockManager;
         this.commandProcessor = commandProcessor;
+        this.taskExecutor = taskExecutor;
     }
 
     /**
-     * Accept a command: enqueue it and attempt to drain the queue for this container.
+     * Enqueues the command and triggers async draining.
+     * Returns immediately — processing happens in background.
      */
     public void submit(InsertItemCommand command) {
         RDeque<InsertItemCommand> queue = redisson.getDeque(QUEUE_PREFIX + command.containerId());
         queue.addLast(command);
         log.info("[{}] Command enqueued for container {}", command.correlationId(), command.containerId());
-        drainQueue(command.containerId());
+        taskExecutor.execute(() -> drainQueue(command.containerId()));
     }
 
     /**

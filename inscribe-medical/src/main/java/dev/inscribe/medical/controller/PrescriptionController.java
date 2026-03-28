@@ -83,7 +83,7 @@ public class PrescriptionController {
     }
 
     @PostMapping("/{id}/exams/ai")
-    public ResponseEntity<List<String>> addExamsViaAi(
+    public ResponseEntity<List<AiResolvedItem>> addExamsViaAi(
             @PathVariable UUID id,
             @RequestBody AiPromptRequest request) {
         findPrescription(id); // verify exists
@@ -98,7 +98,9 @@ public class PrescriptionController {
         }
 
         return ResponseEntity.accepted()
-                .body(resolved.stream().map(CatalogItem::name).toList());
+                .body(resolved.stream()
+                        .map(item -> new AiResolvedItem(item.id(), item.name()))
+                        .toList());
     }
 
     // --- Helpers ---
@@ -131,6 +133,7 @@ public class PrescriptionController {
     public record AddExamRequest(String examCode, String examName, Map<String, Object> metadata) {}
 
     public record AiPromptRequest(String prompt) {}
+    public record AiResolvedItem(String examCode, String examName) {}
 
     public record PrescriptionResponse(UUID id, String patientName, String doctorName,
                                         java.time.Instant createdAt) {}

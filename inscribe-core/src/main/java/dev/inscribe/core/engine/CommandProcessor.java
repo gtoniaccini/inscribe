@@ -15,6 +15,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -58,7 +59,9 @@ public class CommandProcessor {
                 command.catalogItemId(), command.catalogItemName(),
                 workflow.name(), correlationId, command.metadata());
 
-        for (WorkflowDefinition.StepDef stepDef : workflow.steps()) {
+        List<WorkflowDefinition.StepDef> steps = workflow.steps();
+        for (int i = 0; i < steps.size(); i++) {
+            WorkflowDefinition.StepDef stepDef = steps.get(i);
             StepHandler handler = handlerRegistry.get(stepDef.handler());
 
             log.info("[{}] Executing step '{}' via handler '{}'",
@@ -81,8 +84,14 @@ public class CommandProcessor {
                     queue.addFirst(command);
                     return;
                 }
-                case StepResult.Success ignored ->
+                case StepResult.Success ignored -> {
                     log.debug("[{}] Step '{}' succeeded", correlationId, stepDef.name());
+                    // After each successful step except the last, signal validation passed
+                    if (i < steps.size() - 1) {
+                        eventPublisher.publishEvent(new ItemValidatedEvent(
+                                containerId, null, command.workflowName(), correlationId));
+                    }
+                }
             }
         }
 
@@ -93,4 +102,3 @@ public class CommandProcessor {
                 correlationId, command.catalogItemId(), containerId);
     }
 }
-
