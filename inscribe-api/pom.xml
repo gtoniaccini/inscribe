@@ -47,6 +47,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Liquibase for seed data -->
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

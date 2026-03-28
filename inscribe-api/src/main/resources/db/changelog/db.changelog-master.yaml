@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/001-seed-medical-exams.yml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/001-seed-products.yml
+      relativeToChangelogFile: false
+
