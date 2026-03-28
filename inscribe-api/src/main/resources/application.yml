@@ -5,6 +5,8 @@ inscribe:
   transport: none
   outbox:
     relay-interval-ms: 2000
+  orchestrator:
+    pool-size: 10
 
 spring:
   application:
