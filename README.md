@@ -67,7 +67,9 @@ Each step can `REJECT` (discard), `RETRY` (re-enqueue), or `SUCCESS` (continue).
 - **Java 21**
 - **Docker** (for PostgreSQL, Redis and Kafka)
 - **Node 18+ and Angular CLI 18** *(only for the frontend)*
-- **An OpenAI API key** *(optional — only needed for AI-assisted item resolution)*
+- **An AI API key** *(optional — only needed for AI-assisted item resolution)*
+  - [OpenAI](https://platform.openai.com) — paid, model `gpt-4o-mini`
+  - [Groq](https://console.groq.com) — **free tier**, model `llama-3.3-70b-versatile` *(recommended for testing)*
 
 ---
 
@@ -93,15 +95,31 @@ export OPENAI_API_KEY=sk-your-key-here
 
 ### Running Without AI
 
-To run Inscribe without OpenAI, activate the `noai` profile:
+To run Inscribe without any AI provider, activate the `noai` profile:
 
 ```bash
 ./mvnw spring-boot:run -pl inscribe-api -Dspring-boot.run.profiles=noai
 ```
 
-All manual endpoints (create, add items, list, detail) work normally. Only the `/ai` endpoints will return `503 Service Unavailable`.
+All manual endpoints work normally. Only the `/ai` endpoints will return `503 Service Unavailable`.
 
 The API is available at `http://localhost:8080`.
+
+### Running With AI (Groq — free)
+
+[Sign up at console.groq.com](https://console.groq.com), create an API key, then activate the `groq` profile:
+
+```bash
+export GROQ_API_KEY=gsk_your-key-here
+./mvnw spring-boot:run -pl inscribe-api -Dspring-boot.run.profiles=groq
+```
+
+### Running With AI (OpenAI)
+
+```bash
+export OPENAI_API_KEY=sk-your-key-here
+./mvnw spring-boot:run -pl inscribe-api
+```
 
 ### Running With Kafka
 
@@ -187,7 +205,7 @@ curl -s -X POST http://localhost:8080/api/carts/{id}/items/ai \
 curl -N http://localhost:8080/api/stream/{id}
 ```
 
-Events: `ITEM_REQUESTED`, `ITEM_VALIDATED`, `ITEM_REJECTED`, `ITEM_INSERTED`.
+Events: `ITEM_REQUESTED` → `ITEM_VALIDATED` → `ITEM_INSERTED` (or `ITEM_REJECTED`).
 
 ---
 
@@ -271,10 +289,11 @@ inscribe/
 │       │   ├── controller/  # SseController, WorkflowController
 │       │   └── sse/         # SseEventBroadcaster
 │       └── resources/
-│           ├── application.yml
-│           ├── application-noai.yml
-│           ├── application-kafka.yml
-│           └── db/changelog/db.changelog-master.yaml
+           ├── application.yml
+           ├── application-noai.yml
+           ├── application-kafka.yml
+           ├── application-groq.yml
+           └── db/changelog/db.changelog-master.yaml
 │
 ├── frontend/                # Angular 18 SPA
 │   ├── proxy.conf.json      # /api → localhost:8080 (dev proxy)
@@ -291,7 +310,7 @@ inscribe/
 |-----------|-----------|
 | Language | Java 21 (records, sealed interfaces, pattern matching) |
 | Framework | Spring Boot 3.4 |
-| AI | Spring AI 1.0 + OpenAI (gpt-4o-mini) |
+| AI | Spring AI 1.0 + OpenAI (`gpt-4o-mini`) or Groq (`llama-3.3-70b-versatile`) |
 | Frontend | Angular 18 (standalone components, SCSS) |
 | Distributed locking | Redis + Redisson (watchdog auto-renewal) |
 | Queue | Redis per-entity deques |
@@ -309,6 +328,7 @@ inscribe/
 - **Plugin-owned everything** — each plugin owns its entities, tables, controllers, and business logic. The core is a pure orchestration engine.
 - **YAML-driven workflows** — steps, failure policies, and AI prompts are configured declaratively. No code changes to add or reorder steps.
 - **Distributed lock per entity** — guarantees ordered processing even across multiple instances. Uses Redisson `RLock` with watchdog.
+- **Async fire-and-forget orchestration** — `Orchestrator.submit()` enqueues the command and returns immediately; draining runs on a dedicated thread pool. This keeps HTTP response times low regardless of workflow duration, and allows the frontend to show live status updates via SSE.
 - **Outbox pattern** — guarantees at-least-once delivery of domain events to external brokers, decoupled from the main transaction via scheduled polling.
 - **Kafka KRaft** — single-node Kafka without Zookeeper. Activated via the `kafka` Spring profile; falls back to a no-op logger when the profile is inactive.
 - **Sealed interfaces** — `StepResult` (Success | Reject | Retry) and `WorkflowEvent` use Java 21 sealed types for exhaustive pattern matching.
