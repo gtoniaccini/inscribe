@@ -1,0 +1,163 @@
+<div class="page">
+
+  <!-- New prescription -->
+  <div class="card">
+    <div class="card-header" (click)="toggleCreateForm()">
+      <h2>Nuova prescrizione</h2>
+      <span class="toggle-icon">{{ showCreateForm ? '▲' : '▼' }}</span>
+    </div>
+
+    <div class="create-form" *ngIf="showCreateForm">
+      <div class="form-grid">
+        <label>
+          <span>Paziente *</span>
+          <input [(ngModel)]="newPatientName" placeholder="Mario Rossi" class="input" />
+        </label>
+        <label>
+          <span>Codice fiscale</span>
+          <input [(ngModel)]="newPatientFiscalCode" placeholder="RSSMRA85M01H501Z" class="input" />
+        </label>
+        <label>
+          <span>Medico *</span>
+          <input [(ngModel)]="newDoctorName" placeholder="Dr. Bianchi" class="input" />
+        </label>
+        <label>
+          <span>Note</span>
+          <input [(ngModel)]="newNotes" placeholder="Note opzionali" class="input" />
+        </label>
+      </div>
+      <div class="form-footer">
+        <p *ngIf="createError" class="error">{{ createError }}</p>
+        <button
+          class="btn btn--primary"
+          (click)="createPrescription()"
+          [disabled]="creating || !newPatientName.trim() || !newDoctorName.trim()"
+        >
+          <span *ngIf="creating" class="spinner spinner--sm"></span>
+          <span *ngIf="!creating">Crea prescrizione</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prescription loader -->
+  <div class="card">
+    <h2>Prescrizione</h2>
+    <div class="load-row">
+      <input
+        [(ngModel)]="prescriptionIdInput"
+        placeholder="ID prescrizione (UUID)"
+        (keydown.enter)="loadPrescription()"
+        class="input input--wide"
+      />
+      <button class="btn btn--primary" (click)="loadPrescription()" [disabled]="loadingPrescription">
+        <span *ngIf="loadingPrescription" class="spinner spinner--sm"></span>
+        <span *ngIf="!loadingPrescription">Carica</span>
+      </button>
+    </div>
+    <p *ngIf="loadError" class="error">{{ loadError }}</p>
+
+    <div *ngIf="prescription" class="prescription-info">
+      <span><strong>Paziente:</strong> {{ prescription.patientName }}</span>
+      <span><strong>Medico:</strong> {{ prescription.doctorName }}</span>
+      <span *ngIf="prescription.patientFiscalCode"><strong>CF:</strong> {{ prescription.patientFiscalCode }}</span>
+    </div>
+  </div>
+
+  <!-- Add exam -->
+  <div class="card" *ngIf="prescription">
+    <div class="mode-toggle">
+      <button class="toggle-btn" [class.active]="insertMode === 'manual'" (click)="insertMode = 'manual'">
+        ✏️ Manuale
+      </button>
+      <button class="toggle-btn" [class.active]="insertMode === 'ai'" (click)="insertMode = 'ai'; aiError = ''">
+        ✨ AI
+      </button>
+    </div>
+
+    <!-- Manual -->
+    <div class="add-row" *ngIf="insertMode === 'manual'">
+      <input
+        [(ngModel)]="examCode"
+        placeholder="Codice (es. EMO)"
+        class="input input--code"
+        (keydown)="onEnter($event)"
+      />
+      <input
+        [(ngModel)]="examName"
+        placeholder="Nome esame"
+        class="input input--name"
+        (keydown)="onEnter($event)"
+      />
+      <button
+        class="btn btn--add"
+        (click)="addExam()"
+        [disabled]="!examCode.trim() || !examName.trim()"
+        title="Inserisci esame"
+      >+</button>
+    </div>
+
+    <!-- AI -->
+    <div class="ai-row" *ngIf="insertMode === 'ai'">
+      <textarea
+        [(ngModel)]="aiPrompt"
+        placeholder="Descrivi gli esami in linguaggio naturale, es: &quot;Vorrei un emocromo e la glicemia&quot;"
+        class="input input--textarea"
+        rows="3"
+        (keydown.control.enter)="addExamsViaAi()"
+      ></textarea>
+      <div class="ai-footer">
+        <span class="ai-hint">Ctrl+Enter per inviare</span>
+        <p *ngIf="aiError" class="error">{{ aiError }}</p>
+        <button
+          class="btn btn--primary"
+          (click)="addExamsViaAi()"
+          [disabled]="sendingAi || !aiPrompt.trim()"
+        >
+          <span *ngIf="sendingAi" class="spinner spinner--sm"></span>
+          <span *ngIf="!sendingAi">✨ Risolvi con AI</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exams table -->
+  <div class="card" *ngIf="prescription">
+    <h2>Esami <span class="badge">{{ exams.length }}</span></h2>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Codice</th>
+            <th>Nome</th>
+            <th>Stato</th>
+            <th>Inserito il</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="exams.length === 0">
+            <td colspan="4" class="empty">Nessun esame</td>
+          </tr>
+          <tr *ngFor="let exam of exams" [class]="'row--' + exam.status">
+            <td class="cell--code">{{ exam.examCode }}</td>
+            <td>{{ exam.examName }}</td>
+            <td>
+              <span class="status-badge" [class]="'status--' + exam.status">
+                <span *ngIf="isProcessing(exam.status)" class="spinner spinner--xs"></span>
+                {{ statusLabel(exam.status) }}
+                <span *ngIf="exam.status === 'rifiutato' && exam.rejectionReason" class="rejection">
+                  — {{ exam.rejectionReason }}
+                </span>
+              </span>
+            </td>
+            <td class="cell--date">
+              {{ exam.insertedAt ? (exam.insertedAt | date: 'dd/MM/yyyy HH:mm:ss') : '—' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
