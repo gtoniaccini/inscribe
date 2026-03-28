@@ -33,3 +33,7 @@ frontend/.angular/
 
 ### Docker
 docker-compose.override.yml
+
+### Salesforce DX 
+.sfdx/
+
