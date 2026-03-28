@@ -3,8 +3,10 @@
 ![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F?logo=springboot&logoColor=white)
 ![Spring AI](https://img.shields.io/badge/Spring%20AI-1.0-6DB33F?logo=spring&logoColor=white)
+![Angular](https://img.shields.io/badge/Angular-18-DD0031?logo=angular&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Kafka](https://img.shields.io/badge/Kafka-3.7-231F20?logo=apachekafka&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 **An AI-powered, plugin-based workflow engine built with Java 21 and Spring Boot.**
@@ -31,23 +33,27 @@ Each step can `REJECT` (discard), `RETRY` (re-enqueue), or `SUCCESS` (continue).
 ## Architecture
 
 ```
-                          REST / SSE
-                              │
-               ┌──────────────▼──────────────┐
-               │        inscribe-api         │
-               │   SSE · Workflow endpoints  │
-               └──────────────┬──────────────┘
-                              │
-               ┌──────────────▼──────────────┐
-               │        inscribe-core        │
-               │  Orchestrator · LockManager │
-               │  AI Resolver · Outbox · SPI │
-               └──────┬──────────────┬───────┘
-                      │              │
-            ┌─────────▼───┐    ┌─────▼──────────┐
-            │   medical   │    │   ecommerce    │
-            │   plugin    │    │     plugin     │
-            └─────────────┘    └────────────────┘
+                     REST / SSE       Angular :4200
+                         │                │
+          ┌──────────────▼────────────────▼──────────────┐
+          │                  inscribe-api                 │
+          │          SSE · Workflow endpoints             │
+          └──────────────────┬───────────────────────────┘
+                             │
+          ┌──────────────────▼───────────────────────────┐
+          │                inscribe-core                  │
+          │  Orchestrator · CommandProcessor · LockManager│
+          │  AI Resolver · Outbox · SPI                   │
+          └──────┬──────────────────────┬────────────────┘
+                 │                      │
+       ┌─────────▼───┐          ┌───────▼────────┐
+       │   medical   │          │   ecommerce    │
+       │   plugin    │          │     plugin     │
+       └─────────────┘          └────────────────┘
+                 │                      │
+          ┌──────▼──────────────────────▼──────┐
+          │     Outbox → Kafka (KRaft)          │
+          └────────────────────────────────────┘
 ```
 
 **`inscribe-core`** defines the SPI contracts (`StepHandler`, `ItemCatalog`, `StepResult`) and orchestration logic. It has **no domain knowledge** and **no domain tables**.
@@ -59,7 +65,8 @@ Each step can `REJECT` (discard), `RETRY` (re-enqueue), or `SUCCESS` (continue).
 ## Prerequisites
 
 - **Java 21**
-- **Docker** (for PostgreSQL and Redis)
+- **Docker** (for PostgreSQL, Redis and Kafka)
+- **Node 18+ and Angular CLI 18** *(only for the frontend)*
 - **An OpenAI API key** *(optional — only needed for AI-assisted item resolution)*
 
 ---
@@ -71,7 +78,7 @@ Each step can `REJECT` (discard), `RETRY` (re-enqueue), or `SUCCESS` (continue).
 git clone https://github.com/gtoniaccini/inscribe.git
 cd inscribe
 
-# 2. Start PostgreSQL + Redis
+# 2. Start PostgreSQL, Redis (and optionally Kafka)
 docker compose -f infrastructure/docker-compose.yml up -d
 
 # 3. Set your OpenAI key (optional)
@@ -95,6 +102,29 @@ To run Inscribe without OpenAI, activate the `noai` profile:
 All manual endpoints (create, add items, list, detail) work normally. Only the `/ai` endpoints will return `503 Service Unavailable`.
 
 The API is available at `http://localhost:8080`.
+
+### Running With Kafka
+
+To enable Kafka event publishing, activate the `kafka` profile:
+
+```bash
+# Make sure Kafka is running
+docker compose -f infrastructure/docker-compose.yml up -d kafka
+
+# Start the app with the kafka profile
+./mvnw spring-boot:run -pl inscribe-api -Dspring-boot.run.profiles=kafka
+```
+
+With this profile, the `OutboxRelayJob` will publish pending events to the configured Kafka topics (`medical.exam.inserted`, `medical.exam.rejected`, etc.) instead of the default no-op logger.
+
+### Running the Frontend
+
+```bash
+cd frontend
+ng serve
+```
+
+The Angular app is available at `http://localhost:4200`. All `/api/*` calls are automatically proxied to the Spring Boot backend at `localhost:8080` — no CORS configuration needed in development.
 
 ---
 
@@ -204,7 +234,7 @@ Steps execute sequentially. You can add as many as you need — pre-validation, 
 inscribe/
 ├── inscribe-core/           # Generic engine — SPI, orchestrator, AI, outbox
 │   └── src/main/java/dev/inscribe/core/
-│       ├── engine/          # Orchestrator, LockManager, StepHandlerRegistry
+│       ├── engine/          # Orchestrator, CommandProcessor, LockManager, StepHandlerRegistry
 │       ├── spi/             # StepHandler, ItemCatalog, StepResult, WorkflowContext
 │       ├── ai/              # AiResolver (natural language → catalog items)
 │       ├── command/         # InsertItemCommand
@@ -220,7 +250,9 @@ inscribe/
 │       │   ├── handler/     # MedicalValidationHandler, MedicalInsertionHandler
 │       │   ├── model/       # Prescription, PrescriptionExam, MedicalExam
 │       │   └── repository/  # JPA repositories
-│       └── resources/workflow/medical.yml
+│       └── resources/
+│           ├── workflow/medical.yml
+│           └── db/changelog/001-seed-medical-exams.yml
 │
 ├── inscribe-ecommerce/      # E-commerce plugin — carts + products
 │   └── src/main/
@@ -229,14 +261,26 @@ inscribe/
 │       │   ├── handler/     # StockValidationHandler, EcommerceInsertionHandler
 │       │   ├── model/       # Cart, OrderLineItem, Product
 │       │   └── repository/  # JPA repositories
-│       └── resources/workflow/ecommerce.yml
+│       └── resources/
+│           ├── workflow/ecommerce.yml
+│           └── db/changelog/001-seed-products.yml
 │
 ├── inscribe-api/            # Spring Boot application + SSE
-│   └── src/main/java/.../api/
-│       ├── controller/      # SseController, WorkflowController
-│       └── sse/             # SseEventBroadcaster
+│   └── src/main/
+│       ├── java/.../api/
+│       │   ├── controller/  # SseController, WorkflowController
+│       │   └── sse/         # SseEventBroadcaster
+│       └── resources/
+│           ├── application.yml
+│           ├── application-noai.yml
+│           ├── application-kafka.yml
+│           └── db/changelog/db.changelog-master.yaml
 │
-└── infrastructure/          # Docker Compose (PostgreSQL 16, Redis 7)
+├── frontend/                # Angular 18 SPA
+│   ├── proxy.conf.json      # /api → localhost:8080 (dev proxy)
+│   └── src/app/
+│
+└── infrastructure/          # Docker Compose (PostgreSQL 16, Redis 7, Kafka 3.7)
 ```
 
 ---
@@ -248,11 +292,13 @@ inscribe/
 | Language | Java 21 (records, sealed interfaces, pattern matching) |
 | Framework | Spring Boot 3.4 |
 | AI | Spring AI 1.0 + OpenAI (gpt-4o-mini) |
+| Frontend | Angular 18 (standalone components, SCSS) |
 | Distributed locking | Redis + Redisson (watchdog auto-renewal) |
 | Queue | Redis per-entity deques |
 | Persistence | PostgreSQL 16 + Spring Data JPA |
+| Migrations / Seed | Liquibase |
 | Real-time | Server-Sent Events (SSE) |
-| Async delivery | Outbox pattern → Kafka / RabbitMQ (pluggable) |
+| Async delivery | Outbox pattern → Kafka 3.7 KRaft (no Zookeeper) |
 | Build | Maven multi-module |
 | Infrastructure | Docker Compose |
 
@@ -263,10 +309,11 @@ inscribe/
 - **Plugin-owned everything** — each plugin owns its entities, tables, controllers, and business logic. The core is a pure orchestration engine.
 - **YAML-driven workflows** — steps, failure policies, and AI prompts are configured declaratively. No code changes to add or reorder steps.
 - **Distributed lock per entity** — guarantees ordered processing even across multiple instances. Uses Redisson `RLock` with watchdog.
-- **Transactional step pipeline** — all steps within a single command run in one `@Transactional` boundary. Retry re-enqueues; reject discards; if insertion fails, everything rolls back.
 - **Outbox pattern** — guarantees at-least-once delivery of domain events to external brokers, decoupled from the main transaction via scheduled polling.
+- **Kafka KRaft** — single-node Kafka without Zookeeper. Activated via the `kafka` Spring profile; falls back to a no-op logger when the profile is inactive.
 - **Sealed interfaces** — `StepResult` (Success | Reject | Retry) and `WorkflowEvent` use Java 21 sealed types for exhaustive pattern matching.
 - **AI as a first-class citizen** — natural language input is resolved to catalog item IDs via Spring AI and OpenAI, pluggable per workflow.
+- **Modular monolith, microservices-ready** — all plugins run in a single JVM today. Each plugin can be extracted into an independent service with minimal changes: the outbox and SPI contracts are already designed for network-based communication.
 
 ---
 
